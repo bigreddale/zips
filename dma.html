@@ -1,0 +1,171 @@
+<html>
+<head>
+<title>Test</title>
+<script
+	src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"
+	type="text/javascript"></script>
+<script type="text/javascript" src="data2.js"></script>
+<script type="text/javascript">
+function pad(num, size) {
+  var s = num+"";
+  while (s.length < size) s = "0" + s;
+  return s;
+}
+list.sort(function(a,b) { 
+  if(a[1] < b[1]) return -1;
+  if(a[1] > b[1]) return 1;
+  return 0;
+
+});
+var uniqueGroups = {};
+$.each(list, function(i) {
+  if(uniqueGroups[this[1]]) {
+  	uniqueGroups[this[1]+""] += ", " + pad(this[0],5);
+  } else {
+  	uniqueGroups[this[1]+""] = pad(this[0],5);    
+  }
+});
+
+function resetGroups() {
+  var groupCount = parseInt($('.count').val());
+  $('.table').html("");
+  $('.details').html("");
+ var insert = "<table><tr><th>DMA</th>";
+
+  for(var itr = 1; itr <= groupCount; itr++ ) {
+  	insert += "<th>Group " + itr + "</th>";
+  	$(".details").append('<div class="g'+itr+'"><h2>Group '+itr+' DMAs:</h2><span></span><textarea class="zips"></textarea><textarea class="code"></textarea></div>');
+  }
+  
+  insert += "</tr>";
+  
+  $.each(uniqueGroups, function(g) {
+    insert += "<tr><th><span>"+g+"</span></th>";
+
+    for(var itr = 1; itr <= groupCount; itr++ ) {
+    	insert += "<td><input type=checkbox name='"+g+"' value= '"+itr+"'></td>";
+    	
+  	
+
+    }
+   	
+    insert += "</tr>";
+  });
+  
+  $('.table').append( insert + "</table>");
+
+  $('.table input').on('click', function() {
+    	var numZips = 0;
+		  $('.details span').html("");
+		  $('.details textarea').val("");
+		  $('.table input:checked').each(function() {
+				var _this = $(this);
+				var classTarget = ".g" + _this.val();
+				$(classTarget + " span").append(_this.attr("name") + ", ");
+				//console.warn(uniqueGroups[_this.attr("name")]);
+				numZips += uniqueGroups[_this.attr("name")].split(",").length;
+				if($(classTarget + " textarea.zips").val()) {
+					$(classTarget + " textarea.zips").val($(classTarget + " textarea.zips").val() + ", " + uniqueGroups[_this.attr("name")]);
+				} else {
+					$(classTarget + " textarea.zips").val(uniqueGroups[_this.attr("name")]);			  
+				}
+			  updateCode(classTarget + " textarea.zips");
+							
+			});
+		  console.warn("Unique Zipcodes: " + numZips);
+	});
+
+}
+
+function makeZipGroups(list) {
+  var first = 0, last = 0, rangeArray = new Array(); 
+  rangeList = '{"segment": {\
+  "user": {\
+    "zip": {\
+        "type": "listRange",\
+        "value": [';
+        
+  var ziplist = $.map(list.replace(/ /g,"").split(","), function(value){
+    return parseInt(value, 10);
+  });
+  ziplist.sort();
+  for(var itr = 0; itr < ziplist.length; itr++) {
+    if(first == 0) {  //Set first value
+      first = ziplist[itr];
+    	last = ziplist[itr]; //Set last to first value in case it's a single value range
+    } else {
+      if(ziplist[itr] == last + 1) { //Second value is part of the first range
+        last = ziplist[itr];
+      } else { //Second value is not part of the range
+        rangeArray.push('{"type": "range", "from": "'+ pad(first,5)+'", "to": "'+ pad(last,5) +'"}');
+        first = ziplist[itr]; //Reset First
+      	last = ziplist[itr]; //Set last to first value in case it's a single value range
+      }
+    }
+  }
+	//Capture last values
+  rangeArray.push('{"type": "range", "from": "'+ pad(first,5)+'", "to": "'+ pad(last,5) +'"}');
+  console.warn("Ranges Count: " + rangeArray.length);
+	rangeList += rangeArray.toString();
+	rangeList += ']\
+    }\
+ }\
+}}';
+  //console.warn(rangeList);
+  //console.warn(JSON.parse(rangeList));
+  return JSON.stringify(JSON.parse(rangeList), null, "  ");
+}
+function updateCode(_this) {
+	$(_this).val($(_this).val().replace(/ /g,"").split(",").sort().toString());
+	$(_this).parent().find('.code').val(makeZipGroups($(_this).val()));
+}
+$(document).ready( function() {
+	resetGroups();
+	$('.count').on('change', function() {
+	  if(parseInt($(this).val()) > 0 && parseInt($(this).val()) < 10) {
+	    resetGroups();
+	  } 
+	});
+  $('textarea.zips').on('focusout', function(){
+    updateCode(this);
+  });
+  
+
+});
+
+</script>
+<style>
+.table {
+	float:left;
+	margin-right: 20px;
+}
+.details span {
+	display: block;
+	font-weight: bold;
+}
+.details {
+	width: 1700px;
+}
+.details div {
+	width: 1320px;
+	float:left;
+}
+textarea {
+	width: 500px;
+	height: 300px;
+	float: left;
+	margin-right: 10px;
+}
+</style>
+</head>
+<body>
+<div>Number of Groups: 
+<input class="count" value="1" /><br/><br/>
+</div>
+<div class="table"></div>
+<div class="details">
+</div>
+
+</body>
+</html>
+
